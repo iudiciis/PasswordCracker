@@ -29,7 +29,7 @@ Unauthorised password cracking is illegal in most jurisdictions. We are not resp
 
 1. Clone or download the repository:
 ```bash
-git clone <repository-url>
+git clone https://github.com/iudiciis/PasswordCracker.git
 cd password-benchmarking-tool
 ```
 
