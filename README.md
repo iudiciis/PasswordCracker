@@ -2,6 +2,8 @@
 
 A Python-based password strength testing tool that evaluates the security of passwords using three different attack methods: brute force, dictionary attacks, and rainbow table lookups.
 
+*Disclaimer: This README file was written with some assistance from generative AI for the purposes of wording and sentence structure, as well as grammar. Additionally, the code for this tool was also mostly documented with the assistance of AI, however all code was not itself generated with AI tools.*
+
 **This tool is for educational and authorized security testing purposes only.** Only use this tool on:
 - Your own passwords and systems
 - Systems you own or have explicit written permission to test
@@ -82,6 +84,7 @@ python main.py create_rainbow passwords.txt rainbow_output.csv
 This creates a CSV file with plaintext passwords and their MD5, SHA1, SHA256, and SHA512 hashes.
 
 ## File Formats
+Example files can be found in the `data` folder.
 
 ### User File Format
 Create a text file with username:password or username:hash pairs, one per line:
