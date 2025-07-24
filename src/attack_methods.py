@@ -108,7 +108,7 @@ def run_bruteforce_worker(password: str, prefix: str, attempts_queue: Queue, max
         result: Queue to report cracking results
         stop_event: Event trigger to report attempts before terminating
     """
-    charset = get_charset().replace(prefix, "")
+    charset = get_charset()
 
     try:
         print(f"Process {prefix} has started.")
