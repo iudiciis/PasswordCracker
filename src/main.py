@@ -4,6 +4,13 @@ from utils import generate_rainbow_table, load_users, export_results
 from attack_methods import run_bruteforce, run_dictionary, run_rainbow
 
 def main():
+    """
+    Main entry point for the password benchmarking tool.
+    
+    Parses command line arguments and executes either rainbow table creation
+    or password cracking benchmarks using the specified method (brute force,
+    dictionary, or rainbow table lookup).
+    """
     config = parse_arguments()
     if config['command'] == 'create_rainbow':
         generate_rainbow_table(config['resource_file'], config['dest_file'], ['md5', 'sha1', 'sha256', 'sha512'])
@@ -26,6 +33,19 @@ def main():
 
 
 def parse_arguments():
+    """
+    Parses and validates command line arguments for the password benchmarking tool.
+    
+    Supports two main commands:
+    - 'benchmark': Test password strength using various cracking methods
+    - 'create_rainbow': Generate rainbow tables from password lists
+    
+    For benchmark command, supports time limits specified with 's' or 'm' (e.g. 60s or 5m).
+    
+    Returns:
+        Dictionary containing parsed configuration options including command type,
+        file paths, method selection, and time limits
+    """
     parser = argparse.ArgumentParser(description="Password Benchmarking Tool")
     subparsers = parser.add_subparsers(dest='command', help='Method to run')
 

@@ -3,18 +3,39 @@ import csv
 import time
 
 def load_users(filepath):
+    """
+    Loads user credentials from a file in username:password/hash format.
+    
+    Parses each line to extract username and target value (password or hash).
+    
+    Args:
+        filepath: Path to file containing user credentials
+        
+    Returns:
+        List of user dictionaries with username and target fields
+    """
     users = []
     with open(filepath) as file:
         for line in file:
             if ':' not in line:
                 continue
             username, value = line.strip().split(':', 1)
-            is_hash = len(value) > 10
-            users.append({'username': username, 'target': value, 'is_hash': is_hash})
+            users.append({'username': username, 'target': value})
     return users
 
 
 def load_dict(filepath):
+    """
+    Loads a password dictionary from a text file.
+    
+    Reads each line as a potential password for dictionary-based attacks.
+    
+    Args:
+        filepath: Path to dictionary file with one password per line
+        
+    Returns:
+        List of password strings from the file
+    """
     passwords = []
     with open(filepath) as file:
         for line in file:
@@ -23,11 +44,28 @@ def load_dict(filepath):
 
 
 def get_charset():
+    """
+    Returns the character set used for brute force password generation.
+    
+    Returns:
+        String containing all characters used in brute force attacks
+    """
     charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!\"#$%&\'()*+,-./:;<=>?@[\]^_`{|}~'
     return charset
 
 
 def export_results(results, config):
+    """
+    Displays cracking results in a formatted output.
+    
+    Shows different information based on the cracking method used:
+    - Rainbow table: includes hash algorithm detection
+    - Other methods: shows basic password cracking statistics
+    
+    Args:
+        results: List of result dictionaries from cracking attempts
+        config: Configuration dictionary containing method information
+    """
     print("\nCracking Results:")
     if config['method'] == 'rainbow':
         for r in results:
@@ -39,12 +77,16 @@ def export_results(results, config):
 
 def generate_rainbow_table(input_file: str, output_file: str, algorithms: list[str]):
     """
-    Create a rainbow table CSV mapping plaintext passwords to multiple hashes.
+    Creates a rainbow table CSV mapping plaintext passwords to multiple hash algorithms.
+    
+    Reads passwords from input file and generates corresponding hashes using the
+    specified algorithms (MD5, SHA1, SHA256, SHA512, etc.). Outputs a CSV with
+    plaintext and hash columns for fast hash-to-password lookups.
 
-    Parameters:
-    - input_file: path to file with one plaintext password per line
-    - output_file: path to the CSV to write
-    - algorithms: list of hashing algorithms (e.g. ['md5', 'sha1', 'sha256'])
+    Args:
+        input_file: Path to file containing one plaintext password per line
+        output_file: Path where the rainbow table CSV will be written
+        algorithms: List of hash algorithm names to generate (e.g. ['md5', 'sha1'])
     """
     start_time = time.monotonic()
     with open(input_file, 'r', encoding='utf-8') as infile:
@@ -71,9 +113,18 @@ def generate_rainbow_table(input_file: str, output_file: str, algorithms: list[s
 
 def load_rainbow_table(filepath: str):
     """
-    Loads a rainbow table CSV into a list of mappings:
-    Each row is a dict like:
-    {'plaintext': 'password123', 'md5': '...', 'sha1': '...', ...}
+    Loads a rainbow table from CSV format into memory for hash lookups.
+    
+    Reads a CSV file containing plaintext passwords and their corresponding hashes
+    across multiple algorithms. Each row becomes a dictionary mapping algorithm
+    names to hash values.
+    
+    Args:
+        filepath: Path to the rainbow table CSV file
+        
+    Returns:
+        List of dictionaries, each containing plaintext and hash mappings
+        (e.g. {'plaintext': 'password123', 'md5': '...', 'sha1': '...', ...})
     """
     table = []
     with open(filepath, newline='', encoding='utf-8') as file:

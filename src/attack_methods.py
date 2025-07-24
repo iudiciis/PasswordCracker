@@ -6,6 +6,20 @@ from multiprocessing import Process, Queue
 from utils import get_charset, load_dict, load_rainbow_table
 
 def run_bruteforce(users: list[dict[str, str]], config: list[dict[str, Any]]):
+    """
+    Performs brute force password cracking using parallel processes.
+    
+    Each process handles combinations starting with a different character from the charset,
+    generating all possible password combinations up to max_length. Supports time-based
+    limits to prevent infinite execution.
+    
+    Args:
+        users: List of user dictionaries containing username and target password
+        config: Configuration dictionary with max_length, limit_type, and limit_value
+        
+    Returns:
+        List of result dictionaries containing cracking statistics for each user
+    """
     charset = get_charset()
     max_length: int = config['max_length']
     limit_type: str = config['limit_type']
@@ -84,6 +98,23 @@ def run_bruteforce(users: list[dict[str, str]], config: list[dict[str, Any]]):
     return end_results
 
 def run_bruteforce_worker(password: str, prefix: str, attempts_queue: Queue, max_length: int, start: float, limit_type, time_limit: None | timedelta, result: Queue):
+    """
+    Worker process for brute force cracking that handles combinations starting with a specific prefix.
+    
+    Generates all possible password combinations of increasing length using the charset,
+    checking each against the target password. Respects time limits and reports attempts
+    back to the main process.
+    
+    Args:
+        password: Target password to crack
+        prefix: Starting character for this worker's combinations
+        attempts_queue: Queue to report attempt counts
+        max_length: Maximum password length to attempt
+        start: Start time for timing calculations
+        limit_type: Type of limit ('time' or other)
+        time_limit: Time limit as timedelta object
+        result: Queue to report cracking results
+    """
     charset = get_charset().replace(prefix, "")
 
     try:
@@ -118,6 +149,15 @@ def run_bruteforce_worker(password: str, prefix: str, attempts_queue: Queue, max
         return
 
 def attempt_incrementer(queue: Queue):
+    """
+    Background process that aggregates attempt counts from all worker processes.
+    
+    Continuously receives attempt counts from workers and maintains a running total
+    until receiving a STOP signal, then returns the final count.
+    
+    Args:
+        queue: Queue for receiving attempt counts and sending final total
+    """
     attempts = 0
     try:
         while True:
@@ -134,6 +174,19 @@ def attempt_incrementer(queue: Queue):
 
 
 def run_dictionary(users: list[dict[str, str]], config: list[dict[str, Any]]):
+    """
+    Performs dictionary-based password cracking by testing passwords from a wordlist.
+    
+    Sequentially tries each password from the dictionary file against each user's
+    target password. Supports time limits to prevent excessive execution time.
+    
+    Args:
+        users: List of user dictionaries containing username and target password
+        config: Configuration dictionary with resource_file, limit_type, and limit_value
+        
+    Returns:
+        List of result dictionaries containing cracking statistics for each user
+    """
     dictionary: list[str] = load_dict(config['resource_file'])
     end_results = []
     limit_type: str = config['limit_type']
@@ -166,6 +219,20 @@ def run_dictionary(users: list[dict[str, str]], config: list[dict[str, Any]]):
 
 
 def run_rainbow(users: list[dict[str, str]], config: list[dict[str, Any]]):
+    """
+    Performs rainbow table-based password cracking by looking up hashes in precomputed tables.
+    
+    Searches through a rainbow table containing plaintext passwords and their corresponding
+    hashes across multiple algorithms (MD5, SHA1, SHA256, etc.) to find matches for the
+    target hashes.
+    
+    Args:
+        users: List of user dictionaries containing username and target hash
+        config: Configuration dictionary with resource_file path to rainbow table
+        
+    Returns:
+        List of result dictionaries containing hash algorithm, plaintext password, and statistics
+    """
     rainbow = load_rainbow_table(config['resource_file'])
     hash_algos = rainbow[0].keys() - {'plaintext'}
 
