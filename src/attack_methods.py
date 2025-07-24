@@ -2,7 +2,7 @@ from datetime import timedelta
 import itertools
 import time
 from typing import Any
-from multiprocessing import Process, Queue
+from multiprocessing import Process, Queue, Event
 from utils import get_charset, load_dict, load_rainbow_table
 
 def run_bruteforce(users: list[dict[str, str]], config: list[dict[str, Any]]):
@@ -43,12 +43,10 @@ def run_bruteforce(users: list[dict[str, str]], config: list[dict[str, Any]]):
         cracked = False
         curr_results = []
         time_limit = config['limit_value']
-
-        incrementer = Process(target=attempt_incrementer, args=(attempt_queue,))
-        incrementer.start()
+        stop_event = Event()
 
         for prefix in charset:
-            process = Process(target=run_bruteforce_worker, args=(target_password, prefix, attempt_queue, max_length, start, limit_type, time_limit, result_queue))
+            process = Process(target=run_bruteforce_worker, args=(target_password, prefix, attempt_queue, max_length, start, limit_type, time_limit, result_queue, stop_event))
             process.start()
             processes.append(process)
 
@@ -61,26 +59,20 @@ def run_bruteforce(users: list[dict[str, str]], config: list[dict[str, Any]]):
                 break
 
         for process in processes:
+            process.join(timeout=2)
             if process.is_alive():
-                print("Process has terminated.")
+                print(f"Process {process.name} still running after join, terminating.")
                 process.terminate()
                 process.join(timeout=1)
-                if process.is_alive():
-                    process.kill()
 
-        attempt_queue.put("STOP", block=True)
         total_attempts = 0
-        while not attempt_queue.empty():
+        for _ in range(len(processes)):
             try:
-                attempts = attempt_queue.get(block=False)
-                total_attempts += attempts
-            except attempt_queue.empty():
-                break
-
-        incrementer.terminate()
-        incrementer.join(timeout=1)
-        if incrementer.is_alive():
-            incrementer.kill()
+                attempts = attempt_queue.get(timeout=2)
+                if isinstance(attempts, int):
+                    total_attempts += attempts
+            except Exception as e:
+                print(f"Error getting attempt count: {e}")
 
         result_queue.close()
         attempt_queue.close()
@@ -97,7 +89,7 @@ def run_bruteforce(users: list[dict[str, str]], config: list[dict[str, Any]]):
 
     return end_results
 
-def run_bruteforce_worker(password: str, prefix: str, attempts_queue: Queue, max_length: int, start: float, limit_type, time_limit: None | timedelta, result: Queue):
+def run_bruteforce_worker(password: str, prefix: str, attempts_queue: Queue, max_length: int, start: float, limit_type, time_limit: None | timedelta, result: Queue, stop_event):
     """
     Worker process for brute force cracking that handles combinations starting with a specific prefix.
     
@@ -114,6 +106,7 @@ def run_bruteforce_worker(password: str, prefix: str, attempts_queue: Queue, max
         limit_type: Type of limit ('time' or other)
         time_limit: Time limit as timedelta object
         result: Queue to report cracking results
+        stop_event: Event trigger to report attempts before terminating
     """
     charset = get_charset().replace(prefix, "")
 
@@ -122,6 +115,12 @@ def run_bruteforce_worker(password: str, prefix: str, attempts_queue: Queue, max
         attempts = 0
         for length in range(1, max_length + 1):
             for char_combo in itertools.product(charset, repeat=length):
+                if stop_event.is_set():
+                    print(f"Process {prefix} received stop signal.")
+                    result.put(None)
+                    attempts_queue.put(attempts)
+                    return
+
                 guess = prefix + ''.join(char_combo)
                 attempts += 1
                 
@@ -136,6 +135,7 @@ def run_bruteforce_worker(password: str, prefix: str, attempts_queue: Queue, max
                     print(f"Process {prefix} found {guess}.")
                     result.put(guess)
                     attempts_queue.put(attempts)
+                    stop_event.set()
                     return
 
         print(f"Process {prefix} exhausted all combinations.")
@@ -147,30 +147,6 @@ def run_bruteforce_worker(password: str, prefix: str, attempts_queue: Queue, max
         result.put(None)
         attempts_queue.put(attempts)
         return
-
-def attempt_incrementer(queue: Queue):
-    """
-    Background process that aggregates attempt counts from all worker processes.
-    
-    Continuously receives attempt counts from workers and maintains a running total
-    until receiving a STOP signal, then returns the final count.
-    
-    Args:
-        queue: Queue for receiving attempt counts and sending final total
-    """
-    attempts = 0
-    try:
-        while True:
-            message = queue.get()
-            if message == "STOP":
-                queue.put(attempts)
-                break
-            elif isinstance(message, int):
-                attempts += message
-    except Exception as e:
-        print(f"Incrementer error: {e}")
-        queue.put(attempts)
-    return
 
 
 def run_dictionary(users: list[dict[str, str]], config: list[dict[str, Any]]):
