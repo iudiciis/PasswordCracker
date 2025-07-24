@@ -1,4 +1,2 @@
-username:pass
-Bob:1234
-Halo:null
-Jake:p3rs
+username:e10adc3949ba59abbe56e057f20f883e
+Bob:abc

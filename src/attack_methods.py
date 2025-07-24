@@ -169,17 +169,19 @@ def run_rainbow(users: list[dict[str, str]], config: list[dict[str, Any]]):
     rainbow = load_rainbow_table(config['resource_file'])
     hash_algos = rainbow[0].keys() - {'plaintext'}
 
-    attempts = 0
     end_results = []
     for user in users:
-        start = time.time()
+        attempts = 0
+        start = time.monotonic()
         cracked = False
-        password_found = None
+        password_found = 'Not Found'
+        hash_algorithm = 'Unknown'
 
         for entry in rainbow:
             for algo in hash_algos:
                 attempts += 1
                 if user['target'] == entry[algo]:
+                    hash_algorithm = algo
                     cracked = True
                     password_found = entry['plaintext']
                     break
@@ -189,8 +191,10 @@ def run_rainbow(users: list[dict[str, str]], config: list[dict[str, Any]]):
         end_results.append({
             'username': user['username'],
             'cracked': cracked,
+            'algorithm': hash_algorithm,
             'password': password_found,
+            'hash': user['target'],
             'attempts': attempts,
-            'time': time.time() - start
+            'time': time.monotonic() - start
         })
     return end_results
